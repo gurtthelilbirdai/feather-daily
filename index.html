@@ -77,8 +77,9 @@ td.n{text-align:right;color:var(--dim)}
   <p class="small" id="lbnote"></p>
 </div>
 </div>
+<script src="bank.js"></script>
 <script>
-var NTFY=['https://ntfy.sh','https://ntfy.nerdvpn.de'];
+var NTFY=['https://ntfy.nerdvpn.de','https://ntfy.sh'];
 var TOPIC='feather-daily';
 var API_BASES = location.protocol === 'https:' ? [] : ['http://localhost:8600','http://computer:8600'];
 var LS='fd-scores';
@@ -104,7 +105,7 @@ async function ntfyGet(){
   var all=[];
   for(var h of NTFY){
     try{
-      var r=await fetch(h+'/'+TOPIC+'/json?poll=1&limit=200',{signal:AbortSignal.timeout(6000)});
+      var r=await fetch(h+'/'+TOPIC+'/json?poll=1&since=24h&limit=500',{cache:'no-store',signal:AbortSignal.timeout(8000)});
       if(!r.ok)continue;
       var t=await r.text();
       t.split('\n').forEach(function(line){
@@ -119,20 +120,20 @@ async function ntfyGet(){
 }
 async function ntfyPost(p){
   for(var h of NTFY){
-    try{var r=await fetch(h+'/'+TOPIC,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(p),signal:AbortSignal.timeout(6000)});if(r.ok)return true;}catch(e){}
+    try{var r=await fetch(h+'/'+TOPIC,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(p),signal:AbortSignal.timeout(4000)});if(r.ok)return true;}catch(e){}
   }
   return false;
 }
 
 function makeLocalPuzzle(d){
-  var BANK=[['WADDLE','how a round bird moves'],['FEATHER','what keeps a bird warm'],['NEST','a bird\'s little home'],['CHIRP','a tiny bird sound'],['POND','where lily pads float'],['SEED','a snack found in grass'],['SONG','what a bird sings'],['MOTH','a fluttery nighttime snack'],['RAIN','drops from clouds'],['LEAF','green thing on a branch'],['STAR','a pinprick in the night'],['ROCK','a hard grey ground thing'],['LAMP','a tiny sun for the yard'],['BOOK','pages full of words'],['TREE','a tall plant with branches'],['FISH','lives in the pond'],['HOP','a short bird jump'],['WARM','what a feather jacket gives'],['ROOST','where birds settle for the night'],['MIGRATE','to fly south for winter'],['PLUMAGE','a bird colourful coat'],['CACHE','a hidden stash of food'],['BROOD','a family of young birds'],['OWLET','a very young night bird'],['TALON','a bird gripping toe'],['GLIDE','to drift on spread wings'],['PECK','to tap at food with the beak'],['FLOCK','a group of birds together'],['PERCH','where a bird sits and sings'],['MULLET','a small silver pond fish'],['HERON','a long-legged water bird'],['DOVE','a soft cooing bird'],['WREN','a tiny brown songbird'],['EGG','what a nest holds first'],['HAWK','a keen-eyed hunter bird'],['SWIFT','a bird that hardly ever lands'],['ROBIN','the red-breasted morning bird'],['SPARROW','a small brown common bird'],['CROW','a big black clever bird'],['OWL','a round-faced night hunter'],['GULL','a seaside scavenger bird'],['MAGPIE','a black and white shiny bird'],['LARK','a bird that sings while rising'],['IBIS','a long curved beak wader'],['EMU','a huge bird that cannot fly'],['KIWI','a round ground bird with a long beak'],['TOUCAN','a bird with a huge colourful beak'],['PARROT','a bird that copies speech'],['PENGUIN','a bird that swims instead of flies'],['ALBATROSS','a huge seabird with long wings'],['FLAMINGO','a pink long-legged wader'],['WOODPECKER','a bird that taps at tree trunks'],['KINGFISHER','a blue bird that dives for fish'],['NIGHTHAWK','a bird that hunts at dusk'],['CHICKEN','a farm bird that pecks grain'],['PIGEON','a city bird with a soft coo'],['SWALLOW','a bird that dips low over water'],['FEEDER','a garden box full of seed'],['POND','where lily pads float'],['MOSS','soft green stuff on a stone'],['BERRY','a small round fruit for birds'],['GARDEN','where the flowers and worms are']];
+  var BANK=window.FD_BANK||[];
   var seed=2166136261;for(var i=0;i<d.length;i++){seed^=d.charCodeAt(i);seed=Math.imul(seed,16777619)>>>0;}
   var pool=BANK.slice(),out=[];
   for(var k=0;k<5&&pool.length;k++){
     seed=(seed*1664525+1013904223)>>>0;
     var j=seed%pool.length;
     var p=pool.splice(j,1)[0];
-    out.push({word:p[0],clue:p[1],len:p[0].length});
+    out.push({word:p.word,clue:p.clue,len:p.word.length});
   }
   return out;
 }
@@ -201,8 +202,10 @@ async function post(bird,pts,secs,words){
   if(r){document.getElementById('postmsg').textContent='score saved on the shared board.';}
   else{
     var ls=localScores();ls.push(body);localSaveScores();
-    await ntfyPost({type:'score',run:body});
     document.getElementById('postmsg').textContent='score saved locally (backend sleeping).';
+    ntfyPost({type:'score',run:body}).then(function(ok){
+      if(ok){document.getElementById('postmsg').textContent='score saved on the shared board.';loadScores();}
+    });
   }
   loadScores();
 }
