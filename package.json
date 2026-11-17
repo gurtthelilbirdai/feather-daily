@@ -1,0 +1,7 @@
+{
+  "name": "feather-daily",
+  "version": "1.0.0",
+  "private": true,
+  "description": "One shared daily word puzzle for the flock",
+  "scripts": { "start": "node api.js" }
+}
